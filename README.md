@@ -1,30 +1,34 @@
 # PDF Analyzer
 
-A tool to extract outlines and headings from PDF documents.
+PDF Analyzer automatically extracts document outlines and heading structure from
+PDF files.  It provides a small command line interface and Docker setup so you
+can train a model on your own annotated PDFs and then generate JSON outlines for
+new documents.
 
-## Project Structure
+The project was built for an internal hackathon where the challenge was to
+identify headings of different levels (H1, H2, H3…) across PDFs with very
+different layouts.  A machine‑learning model is trained on annotated data using
+features such as font size, boldness and numbering patterns.  The trained model
+is then used to label new documents and produce a structured outline.
+
+## Directory Structure
 
 ```
-pdf_analyzer/
-├── config/               # Configuration settings
-│   ├── __init__.py
-│   └── paths.py          # Path configurations
-├── core/                 # Core functionality
-│   ├── __init__.py
-│   ├── document.py       # PDF parsing
-│   ├── analysis.py       # Feature extraction
-│   └── headings.py       # Heading detection
-├── model/                # Model training
-│   ├── __init__.py
-│   └── trainer.py        # Training functionality
-├── utils/                # Utilities
-│   ├── __init__.py
-│   └── io_helpers.py     # File I/O operations
-├── cli/                  # Command line interface
-│   ├── __init__.py
-│   └── commands.py       # CLI commands
-├── __init__.py
-├── __main__.py
+├── analyze_pdf.py         # Command line entry point
+├── run_project.py         # Helper script for training and analysis
+├── pdf_analyzer/          # Main package
+│   ├── config/            # Path configuration
+│   ├── core/              # Parsing, feature extraction, heading detection
+│   ├── model/             # Model training logic
+│   ├── utils/             # Helper utilities
+│   └── cli/               # CLI wrapper around the functionality
+├── scripts/               # Tools for generating annotation CSVs
+├── input_pdfs/            # Example PDFs to process
+├── models/                # Saved models (created after training)
+├── output/                # JSON outlines produced by the analyzer
+├── docker-compose.yml     # Docker setup
+├── Dockerfile
+└── tests/                 # Unit tests
 ```
 
 ## Installation
@@ -35,13 +39,24 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Model Training
+### 1. Prepare Training Data (optional)
+
+If you want to train the model yourself, extract lines or spans from your PDFs
+and label them:
+
+```bash
+python scripts/export_spans.py      # or export_lines_new.py
+# Open data/annotations_template.csv and fill in the 'label' column
+mv data/annotations_template.csv data/annotations.csv
+```
+
+### 2. Train the Model
 
 ```bash
 python analyze_pdf.py --mode train input_pdfs models/
 ```
 
-### PDF Outline Extraction
+### 3. PDF Outline Extraction
 
 ```bash
 python analyze_pdf.py --mode analyze input_pdfs output/
@@ -90,7 +105,22 @@ For more Docker options, see [DOCKER_COMMANDS.md](DOCKER_COMMANDS.md)
 
 ## Project Components
 
-- **Document Parser**: Extracts text spans with formatting from PDF files
-- **Feature Extractor**: Converts text spans into ML features for classification
-- **Heading Detector**: Classifies text spans as headings of different levels
-- **Model Trainer**: Trains and saves ML models for heading detection
+The code is organized into a few focused modules:
+
+- **Document Parser** – uses [PyMuPDF](https://pymupdf.readthedocs.io/) to read
+  each PDF and collect text spans with font information.
+- **Feature Extractor** – converts spans into numeric features (font size,
+  bold flag, word count, upper‑case ratio, numbering pattern, relative size).
+- **Model Trainer** – trains a simple Decision Tree classifier from annotated
+  examples and stores the model as `models/heading_model.joblib`.
+- **Heading Detector** – loads the trained model and predicts heading levels to
+  generate a JSON outline for each document.
+
+Unit tests for the feature extractor and heading detector reside in the
+`tests/` directory.
+
+## Running Tests
+
+```bash
+pytest -v
+```
