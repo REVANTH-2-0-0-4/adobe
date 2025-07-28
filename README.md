@@ -1,35 +1,49 @@
+
+````markdown
 # PDF Analyzer
 
-PDF Analyzer automatically extracts document outlines and heading structure from
-PDF files.  It provides a small command line interface and Docker setup so you
-can train a model on your own annotated PDFs and then generate JSON outlines for
-new documents.
+PDF Analyzer automatically extracts document outlines and heading structure from PDF files. It provides a simple CLI and Docker setup so you can train a model on your own annotated PDFs and generate JSON outlines.
 
-The project was built for an internal hackathon where the challenge was to
-identify headings of different levels (H1, H2, H3…) across PDFs with very
-different layouts.  A machine‑learning model is trained on annotated data using
-features such as font size, boldness and numbering patterns.  The trained model
-is then used to label new documents and produce a structured outline.
+---
 
 ## Directory Structure
 
-```
-├── analyze_pdf.py         # Command line entry point
-├── run_project.py         # Helper script for training and analysis
-├── pdf_analyzer/          # Main package
-│   ├── config/            # Path configuration
-│   ├── core/              # Parsing, feature extraction, heading detection
-│   ├── model/             # Model training logic
-│   ├── utils/             # Helper utilities
-│   └── cli/               # CLI wrapper around the functionality
-├── scripts/               # Tools for generating annotation CSVs
-├── input_pdfs/            # Example PDFs to process
-├── models/                # Saved models (created after training)
-├── output/                # JSON outlines produced by the analyzer
-├── docker-compose.yml     # Docker setup
+```text
+Adobe_hackathon2025/
+├── analyze_pdf.py
+├── run_project.py
+├── install_requirements.py
+├── setup.py
+├── run_docker.bat
+├── run_docker.sh
 ├── Dockerfile
-└── tests/                 # Unit tests
-```
+├── docker-compose.yml
+├── .gitignore
+├── .dockerignore
+├── DOCKER.md
+├── DOCKER_COMMANDS.md
+├── DOCKER_INSTALL.md
+├── README.md
+├── NEW_README.md
+├── pip.conf
+├── requirements.txt
+├── requirements-minimal.txt
+├── test_imports.py
+├── input_pdfs/
+├── pdf_analyzer/
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── cli/
+│   ├── config/
+│   ├── core/
+│   ├── model/
+│   └── utils/
+├── scripts/
+├── src/
+└── tests/
+````
+
+---
 
 ## Installation
 
@@ -37,90 +51,96 @@ is then used to label new documents and produce a structured outline.
 pip install -r requirements.txt
 ```
 
+---
+
 ## Usage
 
-### 1. Prepare Training Data (optional)
+1. **Prepare Training Data (optional)**
 
-If you want to train the model yourself, extract lines or spans from your PDFs
-and label them:
+   ```bash
+   python scripts/export_spans.py    # or export_lines_new.py
+   # Fill in labels in data/annotations_template.csv
+   mv data/annotations_template.csv data/annotations.csv
+   ```
 
-```bash
-python scripts/export_spans.py      # or export_lines_new.py
-# Open data/annotations_template.csv and fill in the 'label' column
-mv data/annotations_template.csv data/annotations.csv
-```
+2. **Train the Model**
 
-### 2. Train the Model
+   ```bash
+   python analyze_pdf.py --mode train input_pdfs models/
+   ```
 
-```bash
-python analyze_pdf.py --mode train input_pdfs models/
-```
+3. **Extract Outlines**
 
-### 3. PDF Outline Extraction
+   ```bash
+   python analyze_pdf.py --mode analyze input_pdfs output/
+   ```
 
-```bash
-python analyze_pdf.py --mode analyze input_pdfs output/
-```
+---
 
 ## Docker Support
 
-The project includes Docker support for containerized execution.
-
-### Building the Docker Image
+### Build Image
 
 ```bash
-# Build the Docker image
 docker build -t pdf-analyzer .
 ```
 
-### Running with Docker
+### Train
 
 ```bash
-# Run model training
 docker run --rm \
   -v "$(pwd)/input_pdfs:/app/input_pdfs" \
   -v "$(pwd)/models:/app/models" \
-  pdf-analyzer python analyze_pdf.py --mode train input_pdfs models
+  pdf-analyzer \
+  python analyze_pdf.py --mode train input_pdfs models/
+```
 
-# Run PDF analysis
+### Analyze
+
+```bash
 docker run --rm \
   -v "$(pwd)/input_pdfs:/app/input_pdfs" \
   -v "$(pwd)/models:/app/models" \
   -v "$(pwd)/output:/app/output" \
-  pdf-analyzer python analyze_pdf.py --mode analyze input_pdfs output
+  pdf-analyzer \
+  python analyze_pdf.py --mode analyze input_pdfs output/
 ```
 
-### Using Convenience Scripts
+### Convenience Scripts
 
-```bash
-# On Windows
-run_docker.bat
+* **Windows**: `run_docker.bat`
+* **Linux/macOS**:
 
-# On Linux/macOS
-chmod +x run_docker.sh
-./run_docker.sh
-```
+  ```bash
+  chmod +x run_docker.sh
+  ./run_docker.sh
+  ```
 
-For more Docker options, see [DOCKER_COMMANDS.md](DOCKER_COMMANDS.md)
+Refer to [DOCKER\_COMMANDS.md](DOCKER_COMMANDS.md) for more options.
+
+---
 
 ## Project Components
 
-The code is organized into a few focused modules:
+* **Document Parser**
+  Reads PDFs via PyMuPDF and extracts text spans with font metadata.
 
-- **Document Parser** – uses [PyMuPDF](https://pymupdf.readthedocs.io/) to read
-  each PDF and collect text spans with font information.
-- **Feature Extractor** – converts spans into numeric features (font size,
-  bold flag, word count, upper‑case ratio, numbering pattern, relative size).
-- **Model Trainer** – trains a simple Decision Tree classifier from annotated
-  examples and stores the model as `models/heading_model.joblib`.
-- **Heading Detector** – loads the trained model and predicts heading levels to
-  generate a JSON outline for each document.
+* **Feature Extractor**
+  Converts spans into numeric features (font size, bold flag, word count, uppercase ratio, numbering pattern, relative size).
 
-Unit tests for the feature extractor and heading detector reside in the
-`tests/` directory.
+* **Model Trainer**
+  Trains a Decision Tree on annotated data; saves `models/heading_model.joblib`.
+
+* **Heading Detector**
+  Loads the model and predicts heading levels to build a JSON outline.
+
+Unit tests for parser, extractor and detector live in the `tests/` directory.
+
+---
 
 ## Running Tests
 
 ```bash
 pytest -v
 ```
+
