@@ -1,0 +1,18 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtualenv
+venv/
+
+# Data & outputs
+data/annotations_template.csv
+data/annotations.csv
+models/
+output/
+__tmp_round1a__/
+
+# IDE/editor
+.vscode/
+.idea/
